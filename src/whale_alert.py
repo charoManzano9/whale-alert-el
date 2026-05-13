@@ -10,13 +10,42 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+from datetime import datetime, timezone
+from typing import List, Dict
+from logging import Logger, FileHandler, Formatter, DEBUG
 
+def whale_alert_extractor() -> Dict[str, List[str]] | None:
+    
+    logger = Logger("whale_alert_extractor_logger")
+    file_handler = FileHandler('logs.log')
+    logger.setLevel(DEBUG)
+    logger.info("Iniciando")
+    logger.addHandler(file_handler)
+        
+    url = "https://whale-alert.io/whales.html"
+    try:
+        response = requests.get(url)
+        logger.debug(f'obteniendo informacion de {url}')
+        response.encoding = 'utf-8'
 
-url = "https://whale-alert.io/whales.html"
-response = requests.get(url)
-response.encoding = 'utf-8'
+        soup = BeautifulSoup(response.content, 'html.parser')
+        table_rows = soup.select('table.table tbody tr')
 
-soup = BeautifulSoup(response.content, 'html.parser')
-table = soup.select('table.table tbody tr')
+        data = { 
+                    "datetime_utc": [datetime.now(timezone.utc)] * len(table_rows), 
+                    "crypto": [
+                        row.find("th", {"scope": "row"}).find("img")["alt"].strip() 
+                        if row.find("th", {"scope": "row"}).find("img") 
+                        else row.find("th", {"scope": "row"}).get_text(strip=True) 
+                        for row in table_rows
+                    ],
+                    "known": [row.find_all("td")[0].get_text(strip=True) for row in table_rows], 
+                    "unknown": [row.find_all("td")[1].get_text(strip=True) for row in table_rows] 
+                }
+        logger.info(f'Datos extraidos: {len(data)} filas')
+        return data
+    except Exception as e:
+        logger.error(f'Error al extraer los datos: {e}')
+        return None
 
-
+data = whale_alert_extractor()
