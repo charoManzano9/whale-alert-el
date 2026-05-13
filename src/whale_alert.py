@@ -49,3 +49,7 @@ def whale_alert_extractor() -> Dict[str, List[str]] | None:
         return None
 
 data = whale_alert_extractor()
+
+whale_alert_df = pd.DataFrame(data)
+
+whale_alert_df.to_csv(f"data/whales_{datetime.now().strftime('%Y-%m-%d')}.csv", index=False, encoding='utf-8')
